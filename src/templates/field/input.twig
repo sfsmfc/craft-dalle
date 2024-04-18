@@ -44,16 +44,16 @@
         <div class="spinner hidden"></div>
         <div id="dalle-generator-{{ random(10000,99999) }}" class="dalle-generator field" data-fieldid="{{ fieldId }}">
             <div>
-                {{ forms.button({
-                    label: "Generate Image with Dall-E",
-                    class: [
-                    'btn',
-                    'icon',
-                    'add',
-                    'dashed',
-                    'dalle-generate-button',
-                    ]
-                }) }}
+                    {{ forms.button({
+                        label: "Generate Image with Dall-E",
+                        class: [
+                            'btn',
+                            'icon',
+                            'add',
+                            'dashed',
+                            'dalle-generate-button',
+                        ]
+                    }) }}
             </div>
         </div>
     </div>
@@ -85,8 +85,8 @@
 } %}
 
 {% js %}
-    if(!window.dalle){
-        window.dalle = {};
+    if(!window.dalle) {
+        window.dalle = [];
     }
-    window.dalle[{{ fieldId }}] = new {{ jsClass }}({{ jsSettings|json_encode|raw }});
+    window.dalle.push( new {{ jsClass }}({{ jsSettings|json_encode|raw }}) );
 {% endjs %}

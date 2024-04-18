@@ -1,4 +1,19 @@
-(function(){
+(function() {
+    // add jQuery bindFirst function
+    if (!($.fn.bindFirst)) {
+        $.fn.bindFirst = function (events, fn) {
+            let elem, handlers, i, _len;
+            this.on(events, fn);
+            for (i = 0, _len = this.length; i < _len; i++) {
+                elem = this[i];
+                events.split(' ').forEach(function (event) {
+                    handlers = jQuery._data(elem).events[event.split('.')[0]];
+                    handlers.unshift(handlers.pop());
+                })
+            }
+        };
+    }
+
     let globalAjaxAborter = new AbortController();
 
     let allImageUrls = [];
@@ -48,7 +63,7 @@
                 <button class="btn modal-details-back">Back to all images</button>
             </div>
             <div class="modal-details-rhs">
-                
+
             </div>
         </div>
     `);
@@ -59,21 +74,21 @@
     let $editModalDetailsLhsImgZoom = $editModalDetailsWrapper.find('.modal-details-lhs-zoom').first();
     let $editModalDetailsLhsImgZoomInner = $editModalDetailsLhsImgZoom.find('.modal-details-lhs-zoom-inner').first();
 
-    if($(window).width() >= 520) {
-        $editModalDetailsLhsImg.hover(function(e){
+    if ($(window).width() >= 520) {
+        $editModalDetailsLhsImg.hover(function (e) {
             $editModalDetailsLhsImgZoom.show();
-        }, function(e){
+        }, function (e) {
             $editModalDetailsLhsImgZoom.hide();
         });
 
-        $editModalDetailsLhsImg.mousemove(function(e){
+        $editModalDetailsLhsImg.mousemove(function (e) {
             let target = $(e.currentTarget);
             let mouseX = e.originalEvent.x;
             let mouseY = e.originalEvent.y;
 
             let offsetX = (mouseX - target.offset().left) / target.width();
             let offsetY = (mouseY - target.offset().top) / target.height();
-            
+
             let zoomX = (-100) * offsetX;
             let zoomY = (-100) * offsetY;
 
@@ -83,28 +98,28 @@
         })
     }
 
-    $editModalDetailsWrapper.find('.modal-details-back').click(function(e){
+    $editModalDetailsWrapper.find('.modal-details-back').click(function (e) {
         cancelInflight();
         populateResults();
 
     });
 
-    $editModalDetailsWrapper.find('.modal-details-use').click(function(e){
+    $editModalDetailsWrapper.find('.modal-details-use').click(function (e) {
         cancelInflight();
         selectImage($editModalDetailsWrapper.attr('data-url'));
     });
 
-    $editModalDetailsWrapper.find('.modal-details-variants').click(function(e){
+    $editModalDetailsWrapper.find('.modal-details-variants').click(function (e) {
         cancelInflight();
         generateVariants($editModalDetailsWrapper.attr('data-url'));
     });
 
-    $editModalDetailsWrapper.find('.modal-details-extend').click(function(e){
+    $editModalDetailsWrapper.find('.modal-details-extend').click(function (e) {
         cancelInflight();
         generateExtensions($editModalDetailsWrapper.attr('data-url'));
     });
 
-    $editModalDetailsWrapper.find('.modal-details-repaint').click(function(e){
+    $editModalDetailsWrapper.find('.modal-details-repaint').click(function (e) {
         cancelInflight();
         gotoRepaint($editModalDetailsWrapper.attr('data-url'));
     });
@@ -115,51 +130,90 @@
     let $editModalPromptInput = $editModalContent.find('.dalle-prompt');
     let $editModalPromptButton = $editModalContent.find('.dalle-generate-button');
 
-    $editModalPromptButton.click(function(e){
+    $editModalPromptButton.click(function (e) {
         clearModal();
-        setTimeout(function(){
+        setTimeout(function () {
             performNewGeneration($editModalPromptInput.val());
         }, 100)
-    })
-
-    let editModal = new Garnish.Modal($editModalWrapper, {
-        autoShow: false
     });
 
-    let activeGenerator = null;
+    let editModal = new Garnish.Modal($editModalWrapper, {
+        autoShow: false,
+        onHide: jumpToSavedPosition
+    });
 
-    let generators = document.getElementsByClassName('dalle-generator');
-    for (generator of generators) {
-        let launchButton = generator.getElementsByClassName('dalle-generate-button')[0];
-        if(!launchButton) continue;
-        
-        launchButton.addEventListener('click', function(e){
-            triggerModal($(this).parents('.dalle-generator')[0]);
-        });
+    let savedScrollTopPosition = 0;
 
-        let fieldId = generator.getAttribute('data-fieldid');
-        setInterval(function(){
-            let limit = window.dalle[fieldId].settings.limit;
-            if (limit != null && window.dalle[fieldId].$elements.length >= limit) {
+    function jumpToSavedPosition() {
+        $(document).scrollTop(savedScrollTopPosition);
+    }
+
+    $(document).ready(function () {
+        checkAndSetOptions();
+    });
+    checkAndSetOptions();
+
+    $(document).on('click', '.dalle-generate-button', function () {
+        const generator = this.closest('.dalle-generator');
+        if (!generator) return;
+
+        savedScrollTopPosition = $(document).scrollTop();
+        triggerModal(generator);
+    });
+
+    function getGeneratorId(generator) {
+        return generator.closest('.elementselect').id;
+    }
+
+    function getDalleById(id) {
+        return window.dalle.find(generator => id == generator.settings.id);
+    }
+
+    function checkAndSetOptions() {
+        setTimeout(() => {
+            checkLimits();
+            setClickEventOnRemoveImageButton();
+        }, 200);
+    }
+
+    function checkLimits() {
+        window.dalle.forEach(generator => {
+            const $container = generator.$container && generator.$container[0];
+            const launchButton = $container && $container.querySelector('.dalle-generate-button');
+            if (!launchButton) return;
+
+            if (generator.settings.limit && generator.$elements.length >= generator.settings.limit) {
                 $(launchButton).hide();
             } else {
                 $(launchButton).show();
             }
-        }, 200);
+        });
     }
 
-    function cancelInflight(){
+    function setClickEventOnRemoveImageButton() {
+        window.dalle.forEach(generator => {
+            const $container = generator.$container && generator.$container[0];
+            const deleteButton = $container && $container.querySelector('button.delete');
+            if (!deleteButton) return;
+
+            $(deleteButton).unbind('click', checkAndSetOptions);
+            $(deleteButton).bindFirst('click', checkAndSetOptions);
+        });
+    }
+
+    function cancelInflight() {
         globalAjaxAborter.abort();
         globalAjaxAborter = new AbortController();
     }
 
-    function showModal(){
+    function showModal() {
         editModal.show();
     }
 
-    function hideModal(){
+    function hideModal() {
         cancelInflight();
         editModal.hide();
+        setTimeout(checkAndSetOptions, 200);
     }
 
     function resetModal() {
@@ -250,27 +304,27 @@
             headers: {
                 'Content-Type': 'application/json'
             },
-            redirect: 'follow', 
-            signal: globalAjaxAborter.signal   
+            redirect: 'follow',
+            signal: globalAjaxAborter.signal
         }).then(handleFetchErrors)
-        .then((response) => response.json()).then((data) => {
+            .then((response) => response.json()).then((data) => {
 
             let elementId = data.assetId;
             let title = data.title;
             let siteId = data.siteId;
             let imageUrl = data.imageUrl;
 
-            let elementString = `<div 
-                class="element large hasthumb" 
-                data-kind="image" 
-                data-image-width="2200" 
-                data-image-height="1467" 
-                data-peer-file="" 
-                data-movable="" 
-                data-replaceable="" 
-                data-type="craft\elements\Asset" 
-                data-status="enabled" 
-                data-settings="{&quot;context&quot;:&quot;modal&quot;,&quot;size&quot;:&quot;large&quot;,&quot;showStatus&quot;:false,&quot;showThumb&quot;:true,&quot;showLabel&quot;:true,&quot;showDraftName&quot;:true}" 
+            let elementString = `<div
+                class="element large hasthumb"
+                data-kind="image"
+                data-image-width="2200"
+                data-image-height="1467"
+                data-peer-file=""
+                data-movable=""
+                data-replaceable=""
+                data-type="craft\elements\Asset"
+                data-status="enabled"
+                data-settings="{&quot;context&quot;:&quot;modal&quot;,&quot;size&quot;:&quot;large&quot;,&quot;showStatus&quot;:false,&quot;showThumb&quot;:true,&quot;showLabel&quot;:true,&quot;showDraftName&quot;:true}"
                 data-editable=""
             >
                 <div class="elementthumb checkered" data-sizes="120px" data-srcset="${imageUrl} 120w">
@@ -291,8 +345,9 @@
                     id: elementId,
                     $element: element
                 }
-            ]
-            window.dalle[fieldId].selectElements(elements)
+            ];
+            const dalle = getDalleById(getGeneratorId(activeGenerator));
+            dalle.selectElements(elements);
             hideModal();
             resetModal();
         }).catch(error => {
@@ -319,28 +374,28 @@
             headers: {
                 'Content-Type': 'application/json'
             },
-            redirect: 'follow',    
+            redirect: 'follow',
             signal: globalAjaxAborter.signal
-        
+
         }).then(handleFetchErrors)
-        .then((response) => response.json()).then((data) => {
+            .then((response) => response.json()).then((data) => {
 
             let elementId = data.assetId;
             let title = data.title;
             let siteId = data.siteId;
             let imageUrl = data.imageUrl;
 
-            let elementString = `<div 
-                class="element large hasthumb" 
-                data-kind="image" 
-                data-image-width="2200" 
-                data-image-height="1467" 
-                data-peer-file="" 
-                data-movable="" 
-                data-replaceable="" 
-                data-type="craft\elements\Asset" 
-                data-status="enabled" 
-                data-settings="{&quot;context&quot;:&quot;modal&quot;,&quot;size&quot;:&quot;large&quot;,&quot;showStatus&quot;:false,&quot;showThumb&quot;:true,&quot;showLabel&quot;:true,&quot;showDraftName&quot;:true}" 
+            let elementString = `<div
+                class="element large hasthumb"
+                data-kind="image"
+                data-image-width="2200"
+                data-image-height="1467"
+                data-peer-file=""
+                data-movable=""
+                data-replaceable=""
+                data-type="craft\elements\Asset"
+                data-status="enabled"
+                data-settings="{&quot;context&quot;:&quot;modal&quot;,&quot;size&quot;:&quot;large&quot;,&quot;showStatus&quot;:false,&quot;showThumb&quot;:true,&quot;showLabel&quot;:true,&quot;showDraftName&quot;:true}"
                 data-editable=""
             >
                 <div class="elementthumb checkered" data-sizes="120px" data-srcset="${imageUrl} 120w">
@@ -361,8 +416,9 @@
                     id: elementId,
                     $element: element
                 }
-            ]
-            window.dalle[fieldId].selectElements(elements)
+            ];
+            const dalle = getDalleById(getGeneratorId(activeGenerator));
+            dalle.selectElements(elements);
             hideModal();
             resetModal();
         }).catch(error => {
@@ -389,15 +445,15 @@
             headers: {
                 'Content-Type': 'application/json'
             },
-            redirect: 'follow',  
-            signal: globalAjaxAborter.signal  
+            redirect: 'follow',
+            signal: globalAjaxAborter.signal
         }).then(handleFetchErrors)
-        .then((response) => response.json()).then((data) => {
+            .then((response) => response.json()).then((data) => {
             allImageUrls = data.urls.concat(allImageUrls);
             populateResults();
         }).catch(error => {
             displayFetchErrors(error);
-            setTimeout(function(){ //Gives the XHR request a chance to cleanly close before the abort is fired
+            setTimeout(function () { //Gives the XHR request a chance to cleanly close before the abort is fired
                 clearModal(true);
             }, 100);
         });
@@ -418,24 +474,24 @@
                 </div>
             </div>
             `);
-            
+
             let fieldId = activeGenerator.getAttribute('data-fieldid');
             $editModalResultsWrapper.append($item);
 
-            $item.find('.dalle-view-button').click(function(e){
+            $item.find('.dalle-view-button').click(function (e) {
                 showDetails($(this).parents('.dalle-preview-item').first().attr('data-url'));
             });
         }
     }
 
     function generateVariants(imageUrl) {
-        
+
         detailsRHSLoading();
 
         let varyData = {
             imageUrl,
         }
-        
+
         let varyUrl = createActionUrl('craft-dalle/dall-e-field/generate-variants', varyData);
         fetch(varyUrl, {
             method: 'GET',
@@ -443,15 +499,15 @@
             headers: {
                 'Content-Type': 'application/json'
             },
-            redirect: 'follow',    
+            redirect: 'follow',
             signal: globalAjaxAborter.signal
         }).then(handleFetchErrors)
-        .then((response) => response.json()).then((data) => {
+            .then((response) => response.json()).then((data) => {
             allImageUrls = data.urls.concat(allImageUrls);
             populateVaryResults(data.urls);
         }).catch(error => {
             displayFetchErrors(error);
-            setTimeout(function(){ //Gives the XHR request a chance to cleanly close before the abort is fired
+            setTimeout(function () { //Gives the XHR request a chance to cleanly close before the abort is fired
                 clearDetailsRHS();
             }, 100);
         });
@@ -471,7 +527,7 @@
             </div>
             `);
 
-            $item.find('.dalle-vary-select-button').click(function(e){
+            $item.find('.dalle-vary-select-button').click(function (e) {
                 showDetails($(this).data('url'));
             })
             $varyResultsWrapper.append($item);
@@ -498,14 +554,14 @@
             headers: {
                 'Content-Type': 'application/json'
             },
-            redirect: 'follow',    
+            redirect: 'follow',
             signal: globalAjaxAborter.signal
         }).then(handleFetchErrors)
-        .then((response) => response.json()).then((data) => {
+            .then((response) => response.json()).then((data) => {
             populateExtensions(data.left, data.right);
         }).catch(error => {
             displayFetchErrors(error);
-            setTimeout(function(){ //Gives the XHR request a chance to cleanly close before the abort is fired
+            setTimeout(function () { //Gives the XHR request a chance to cleanly close before the abort is fired
                 clearDetailsRHS();
             }, 100);
         });
@@ -526,7 +582,7 @@
         $selectButton = $('<button type="button" disabled class="submit btn dalle-use-extensions-button disabled">Use selected pair</button>');
         $selectButtonWrapper.append($selectButton);
 
-        for (let i = 0; i<leftUrls.length; i++) {
+        for (let i = 0; i < leftUrls.length; i++) {
             let leftUrl = leftUrls[i];
             let rightUrl = rightUrls[i];
             $row = $(`
@@ -543,7 +599,7 @@
             `);
             $wrapper.append($row);
 
-            $row.find('.dalle-extensions-item').click(function(e){
+            $row.find('.dalle-extensions-item').click(function (e) {
                 let button = $(this);
                 if (button.hasClass('dalle-extensions-item-left')) {
                     $wrapper.data('selected-left', button.data('url'));
@@ -556,7 +612,7 @@
                     button.addClass('selected');
                 }
 
-                if($wrapper.data('selected-left') && $wrapper.data('selected-right')) {
+                if ($wrapper.data('selected-left') && $wrapper.data('selected-right')) {
                     $selectButton.prop("disabled", false);
                     $selectButton.removeClass('disabled');
                 } else {
@@ -570,7 +626,7 @@
         $editModalDetailsRhs.append($wrapper);
         $editModalDetailsRhs.append($selectButtonWrapper);
 
-        $selectButton.click(function(e){
+        $selectButton.click(function (e) {
             cancelInflight();
             selectImagePair($wrapper.data('selected-left'), $wrapper.data('selected-right'));
         })
@@ -587,7 +643,7 @@
                     <canvas></canvas>
                 </div>
                 <div class="dalle-repaint-buttons">
-                    <button class="btn dalle-repaint-clear-button">Reset</button>    
+                    <button class="btn dalle-repaint-clear-button">Reset</button>
                     <button class="btn dalle-repaint-button">Repaint Selected</button>
                 </div>
             </div>
@@ -598,7 +654,7 @@
         $repaintDom.find('img').prop('src', imageUrl);
         let canvas = $repaintDom.find('canvas')[0];
         var ctx = canvas.getContext("2d");
-        
+
         let $repaintButton = $repaintDom.find('.dalle-repaint-button');
         let $clearButton = $repaintDom.find('.dalle-repaint-clear-button');
 
@@ -614,17 +670,17 @@
 
         let lastX, lastY = 0;
 
-        $repaintCanvas.mousedown(function(e){
+        $repaintCanvas.mousedown(function (e) {
             drawing = true;
             ctx.beginPath();
         });
-        $repaintCanvas.mouseup(function(e){
+        $repaintCanvas.mouseup(function (e) {
             drawing = false;
             lastX = 0,
-            lastY = 0;
+                lastY = 0;
         });
 
-        $repaintCanvas.mousemove(function(e){
+        $repaintCanvas.mousemove(function (e) {
             if (drawing) {
                 let xPos = e.originalEvent.x - $repaintCanvas.offset().left;
                 let yPos = (e.originalEvent.y - $repaintCanvas.offset().top) + $(document).scrollTop();
@@ -642,16 +698,16 @@
                     ctx.closePath();
                 }
                 lastX = xPos,
-                lastY = yPos;
+                    lastY = yPos;
             }
         });
 
-        $repaintButton.click(function(e){
+        $repaintButton.click(function (e) {
             let dataUrl = canvas.toDataURL("image/png");
             generateRepaint(imageUrl, dataUrl);
         });
 
-        $clearButton.click(function(e){
+        $clearButton.click(function (e) {
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         })
 
@@ -677,15 +733,15 @@
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(extendData),
-            redirect: 'follow',    
+            redirect: 'follow',
             signal: globalAjaxAborter.signal
         }).then(handleFetchErrors)
-        .then((response) => response.json()).then((data) => {
+            .then((response) => response.json()).then((data) => {
             allImageUrls = data.urls.concat(allImageUrls);
             populateVaryResults(data.urls);
         }).catch(error => {
             displayFetchErrors(error);
-            setTimeout(function(){ //Gives the XHR request a chance to cleanly close before the abort is fired
+            setTimeout(function () { //Gives the XHR request a chance to cleanly close before the abort is fired
                 clearDetailsRHS();
             }, 100);
         });
@@ -699,18 +755,18 @@
     }
 
     function displayFetchErrors(error) {
-        if (error.name && error.name == 'AbortError') { 
+        if (error.name && error.name == 'AbortError') {
             Craft.cp.displayError('Request cancelled');
         } else if (error.text) { //This is an HTTP reponse
             error.text().then(text => {
-                try{
+                try {
                     let parsed = JSON.parse(text); //Is it JSON?
                     if (parsed.hasOwnProperty('message')) { //Does it have a message?
                         Craft.cp.displayError(parsed.message);
                     } else {
                         Craft.cp.displayError('An unknown error occurred.');
                     }
-                } catch(e) {
+                } catch (e) {
                     Craft.cp.displayError(text); //Failed parsing JSON, output body
                 }
             });
@@ -722,7 +778,7 @@
     function createActionUrl(path, queryData) {
         let baseUrl = Craft.actionUrl;
         let parsedUrl = new URL(baseUrl);
-        if(parsedUrl.searchParams.get('p') && parsedUrl.searchParams.get('p').length > 0){
+        if (parsedUrl.searchParams.get('p') && parsedUrl.searchParams.get('p').length > 0) {
             let existingPValue = parsedUrl.searchParams.get('p');
             let newPValue = existingPValue.replace(/\/+$/, '') + '/' + path;
             parsedUrl.searchParams.set('p', newPValue)
@@ -734,7 +790,8 @@
         for (let [key, val] of updatedParams.entries()) {
             parsedUrl.searchParams.append(key, val);
         }
-        
+
         return parsedUrl.toString();
     }
+
 })();
