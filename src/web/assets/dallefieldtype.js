@@ -317,15 +317,17 @@
             let elementString = `<div
                 class="element large hasthumb"
                 data-kind="image"
-                data-image-width="2200"
-                data-image-height="1467"
+                data-image-height="${data.height}"
+                data-image-width="${data.width}"
                 data-peer-file=""
                 data-movable=""
                 data-replaceable=""
-                data-type="craft\elements\Asset"
+                data-type="craft\\elements\\Asset"
                 data-status="enabled"
                 data-settings="{&quot;context&quot;:&quot;modal&quot;,&quot;size&quot;:&quot;large&quot;,&quot;showStatus&quot;:false,&quot;showThumb&quot;:true,&quot;showLabel&quot;:true,&quot;showDraftName&quot;:true}"
                 data-editable=""
+                data-id="${elementId}"
+                data-site-id="${siteId}"
             >
                 <div class="elementthumb checkered" data-sizes="120px" data-srcset="${imageUrl} 120w">
                     <img sizes="120px" srcset="${imageUrl} 120w" alt="">
@@ -388,15 +390,17 @@
             let elementString = `<div
                 class="element large hasthumb"
                 data-kind="image"
-                data-image-width="2200"
-                data-image-height="1467"
+                data-image-height="${data.height}"
+                data-image-width="${data.width}"
                 data-peer-file=""
                 data-movable=""
                 data-replaceable=""
-                data-type="craft\elements\Asset"
+                data-type="craft\\elements\\Asset"
                 data-status="enabled"
                 data-settings="{&quot;context&quot;:&quot;modal&quot;,&quot;size&quot;:&quot;large&quot;,&quot;showStatus&quot;:false,&quot;showThumb&quot;:true,&quot;showLabel&quot;:true,&quot;showDraftName&quot;:true}"
                 data-editable=""
+                data-id="${elementId}"
+                data-site-id="${siteId}"
             >
                 <div class="elementthumb checkered" data-sizes="120px" data-srcset="${imageUrl} 120w">
                     <img sizes="120px" srcset="${imageUrl} 120w" alt="">

@@ -43,7 +43,7 @@ class DallEFieldController extends Controller
                     'message' => "There was an error communicating with the Open AI API.",
                 ])->setStatusCode(500);
             }
-            
+
             return $this->asJson([
                 'result' => 'error',
                 'message' => $response->error->message ?? "There was an error communicating with the Open AI API.",
@@ -91,7 +91,7 @@ class DallEFieldController extends Controller
                     'message' => "There was an error communicating with the Open AI API.",
                 ])->setStatusCode(500);
             }
-            
+
             return $this->asJson([
                 'result' => 'error',
                 'message' => $response->error->message ?? "There was an error communicating with the Open AI API.",
@@ -141,7 +141,7 @@ class DallEFieldController extends Controller
                     'message' => "There was an error communicating with the Open AI API.",
                 ])->setStatusCode(500);
             }
-            
+
             return $this->asJson([
                 'result' => 'error',
                 'message' => $response->error->message ?? "There was an error communicating with the Open AI API.",
@@ -199,7 +199,7 @@ class DallEFieldController extends Controller
             'urls' => $urls,
         ]);
 
-    }   
+    }
 
     public function actionUseImage()
     {
@@ -235,7 +235,9 @@ class DallEFieldController extends Controller
             'assetId' => $asset->id,
             'title' => $asset->title,
             'siteId' => '1',
-            'imageUrl' => $asset->getUrl()
+            'imageUrl' => $asset->getUrl(),
+            'height' => $asset->getHeight(),
+            'width' => $asset->getWidth()
         ]);
 
     }
@@ -262,7 +264,7 @@ class DallEFieldController extends Controller
         /** @var DallE $dalle */
         $dalle = Plugin::$plugin->dalle;
         try{
-            $asset = $dalle->saveImagePairAsAsset($leftUrl, $rightUrl, $folder);    
+            $asset = $dalle->saveImagePairAsAsset($leftUrl, $rightUrl, $folder);
         } catch(\Exception $e) {
             return $this->asJson([
                 'result' => 'error',
@@ -275,7 +277,9 @@ class DallEFieldController extends Controller
             'assetId' => $asset->id,
             'title' => $asset->title,
             'siteId' => '1',
-            'imageUrl' => $asset->getUrl()
+            'imageUrl' => $asset->getUrl(),
+            'height' => $asset->getHeight(),
+            'width' => $asset->getWidth()
         ]);
 
     }
